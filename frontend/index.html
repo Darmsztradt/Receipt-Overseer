@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zarządca paragonów</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="notification-area"></div>
+
+    <div class="container" id="auth-view">
+        <h1>Zarządca paragonów</h1>
+        <div id="login-form">
+            <h2>Logowanie</h2>
+            <input type="text" id="login-username" placeholder="Nazwa użytkownika">
+            <input type="password" id="login-password" placeholder="Hasło">
+            <button onclick="login()">Zaloguj</button>
+            <p>Nie masz konta? <a href="#" onclick="toggleAuth('register')">Zarejestruj się</a></p>
+        </div>
+        <div id="register-form" class="hidden">
+            <h2>Rejestracja</h2>
+            <input type="text" id="reg-username" placeholder="Nazwa użytkownika">
+            <input type="password" id="reg-password" placeholder="Hasło">
+            <button onclick="register()">Zarejestruj</button>
+            <p>Masz już konto? <a href="#" onclick="toggleAuth('login')">Zaloguj się</a></p>
+        </div>
+    </div>
+
+    <div class="container hidden" id="dashboard-view">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h1 id="welcome-msg">Panel główny</h1>
+            <div class="header-actions">
+                <button onclick="logout()" style="width: auto;" class="secondary">Wyloguj</button>
+            </div>
+        </div>
+        <p>Witaj</p>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
