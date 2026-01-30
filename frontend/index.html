@@ -4,15 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zarządca paragonów</title>
+    <title>Expense Manager</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-    <div id="notification-area"></div>
+
 
     <div class="container" id="auth-view">
-        <h1>Zarządca paragonów</h1>
+        <h1>Menedżer Wydatków</h1>
         <div id="login-form">
             <h2>Logowanie</h2>
             <input type="text" id="login-username" placeholder="Nazwa użytkownika">
@@ -31,15 +31,46 @@
 
     <div class="container hidden" id="dashboard-view">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h1 id="welcome-msg">Panel główny</h1>
+            <h1 id="welcome-msg">Dashboard</h1>
             <div class="header-actions">
                 <button onclick="logout()" style="width: auto;" class="secondary">Wyloguj</button>
             </div>
         </div>
-        <p>Witaj</p>
+
+        <div class="section">
+            <h3>Dodaj Wydatek</h3>
+            <input type="number" id="exp-amount" placeholder="Kwota" step="0.01">
+            <input type="text" id="exp-desc" placeholder="Opis">
+            <div>
+                <label>Podziel z:</label>
+                <div id="user-select-list" class="user-select-container">
+                    <!-- Checkboxes will be populated here -->
+                </div>
+            </div>
+            <button onclick="addExpense()">Dodaj Wydatek</button>
+        </div>
+
+        <div class="section">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                <div style="display: flex; gap: 10px; flex-grow: 1;">
+                    <h3>Wydatki</h3>
+                </div>
+                <button onclick="loadExpenses()" style="width: auto;">Odśwież</button>
+            </div>
+            <div id="expense-list">
+                <!-- Expenses will be listed here -->
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Podsumowanie Długów</h3>
+            <div id="debt-summary"></div>
+        </div>
     </div>
 
-    <script src="app.js"></script>
+
+
+    <script src="app.js?v=6"></script>
 </body>
 
 </html>

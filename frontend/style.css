@@ -48,6 +48,50 @@ button.secondary {
     background-color: #95a5a6;
 }
 
+button.danger {
+    background-color: #e74c3c;
+}
+
+/* User Selection Grid */
+.user-select-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+    border: 1px solid #eee;
+    padding: 10px;
+    border-radius: 4px;
+    background: #fafafa;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.user-select-item {
+    display: flex;
+    align-items: center;
+    background: white;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.user-select-item:hover {
+    background-color: #eef2f7;
+}
+
+.user-select-item input {
+    width: auto;
+    margin-right: 8px;
+}
+
+.user-select-item label {
+    cursor: pointer;
+    user-select: none;
+    font-size: 0.9em;
+}
+
 .header-actions {
     display: flex;
     gap: 10px;
@@ -55,4 +99,29 @@ button.secondary {
 
 .hidden {
     display: none;
+}
+
+
+
+.expense-item {
+    border-bottom: 1px solid #eee;
+    padding: 10px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.expense-item:last-child {
+    border-bottom: none;
+}
+
+.expense-details {
+    flex-grow: 1;
+}
+
+.expense-actions button {
+    width: auto;
+    background-color: #e74c3c;
+    margin-left: 10px;
+    padding: 5px 10px;
 }
