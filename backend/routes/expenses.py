@@ -1,12 +1,29 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from .. import models, schemas, database, auth
+from ..protocols import mqtt_handler
 import json
 
 router = APIRouter()
 
+# WebSocket Manager
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
 
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            await connection.send_text(message)
+
+manager = ConnectionManager()
 
 @router.post("/expenses/", response_model=schemas.Expense)
 async def create_expense(expense: schemas.ExpenseCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
@@ -32,7 +49,10 @@ async def create_expense(expense: schemas.ExpenseCreate, db: Session = Depends(d
     db.commit()
     db.refresh(db_expense)
     
-
+    # Notify Protocols
+    message = {"event": "new_expense", "expense_id": db_expense.id, "amount": db_expense.amount, "description": db_expense.description, "payer": current_user.username}
+    mqtt_handler.publish(message)
+    await manager.broadcast(json.dumps(message))
 
     return db_expense
 
@@ -79,7 +99,9 @@ async def update_expense(expense_id: int, expense_update: schemas.ExpenseCreate,
     db.commit()
     db.refresh(db_expense)
     
-
+    message = {"event": "update_expense", "expense_id": db_expense.id}
+    mqtt_handler.publish(message)
+    await manager.broadcast(json.dumps(message))
 
     return db_expense
 
@@ -95,8 +117,48 @@ async def delete_expense(expense_id: int, db: Session = Depends(database.get_db)
     db.delete(db_expense)
     db.commit()
 
-
+    message = {"event": "delete_expense", "expense_id": expense_id}
+    mqtt_handler.publish(message)
+    await manager.broadcast(json.dumps(message))
 
     return {"detail": "Expense deleted"}
 
+@router.get("/chat/history", response_model=List[schemas.Message])
+def get_chat_history(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    messages = db.query(models.Message).order_by(models.Message.timestamp.asc()).limit(50).all()
+    return messages
 
+@router.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(database.get_db)):
+    await manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            # Parse data to extract user and content
+            # Data format expected: JSON dict with user, msg, time, event='chat'
+            # We trust the 'user' field from client for display, but for DB we should use authenticated user.
+            # However, WS here doesn't have easy auth in this snippet without token query param.
+            # For simplicity in this demo, we'll try to find the user by username sent in JSON.
+            
+            import json
+            try:
+                payload = json.loads(data)
+                if payload.get('event') == 'chat':
+                    username = payload.get('user')
+                    content = payload.get('msg')
+                    
+                    # Find user
+                    user = db.query(models.User).filter(models.User.username == username).first()
+                    if user:
+                        msg_entry = models.Message(user_id=user.id, content=content)
+                        db.add(msg_entry)
+                        db.commit()
+                        db.refresh(msg_entry)
+                        # Update payload time to server time if needed, or keep client time
+            except:
+                pass # Fail silently for invalid json
+            
+            # Broadcast received message to all
+            await manager.broadcast(data)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)

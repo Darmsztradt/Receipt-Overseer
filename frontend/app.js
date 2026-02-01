@@ -1,7 +1,7 @@
 const API_URL = "http://localhost:8000";
 let token = localStorage.getItem("token");
 let currentUser = localStorage.getItem("username");
-
+let ws = null;
 
 document.addEventListener("DOMContentLoaded", () => {
     if (token) {
@@ -90,14 +90,34 @@ function showDashboard() {
 
     loadUsers();
     loadExpenses();
+    loadChatHistory();
+    initWebSocket();
+}
+
+async function loadChatHistory() {
+    try {
+        const response = await fetch(`${API_URL}/chat/history`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+            const messages = await response.json();
+            const container = document.getElementById('chat-messages');
+            container.innerHTML = '';
+            messages.forEach(msg => {
+                const time = new Date(msg.timestamp).toLocaleTimeString();
+                addChatMessage(msg.user ? msg.user.username : 'Unknown', msg.content, time);
+            });
+        }
+    } catch (e) {
+        console.error("Failed to load chat history", e);
+    }
 }
 
 
 
-
-
-async function loadExpenses() {
+async function loadExpenses(search = "") {
     let url = `${API_URL}/expenses/`;
+    if (search) url += `?search=${search}`;
 
     const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -214,11 +234,143 @@ function calculateDebt(expenses) {
     container.innerHTML = html;
 }
 
+let searchTimeout;
+function debounceSearch() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        const query = document.getElementById('search-input').value;
+        loadExpenses(query);
+    }, 500);
+}
 
+function initWebSocket() {
+    if (ws) ws.close();
+    ws = new WebSocket(`ws://localhost:8000/ws`);
 
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
 
+        if (data.event === 'chat') {
+            addChatMessage(data.user, data.msg, data.time);
+        } else {
+            showNotification(`Zdarzenie: ${data.event}`);
+            // simplistic reload
+            loadExpenses(document.getElementById('search-input').value);
+        }
+    };
+}
 
+function sendChat() {
+    const input = document.getElementById('chat-input');
+    const msg = input.value;
+    if (!msg) return;
 
+    const payload = {
+        event: 'chat',
+        user: currentUser,
+        msg: msg,
+        time: new Date().toLocaleTimeString()
+    };
+
+    ws.send(JSON.stringify(payload));
+    input.value = '';
+}
+
+function addChatMessage(user, msg, time) {
+    const div = document.createElement('div');
+    div.className = 'message';
+    div.innerHTML = `
+        <span class="meta">[${time}] <strong>${user}</strong>:</span>
+        <span>${msg}</span>
+    `;
+    const container = document.getElementById('chat-messages');
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+function toggleChatBody() {
+    const body = document.getElementById('chat-body');
+    if (body.style.display === 'none') {
+        body.style.display = 'block';
+    } else {
+        body.style.display = 'none';
+    }
+}
+
+function showNotification(msg) {
+    const area = document.getElementById('notification-area');
+    const note = document.createElement('div');
+    note.className = 'notification';
+    note.innerText = msg;
+    area.appendChild(note);
+    setTimeout(() => note.remove(), 3000);
+}
+
+async function changePasswordPrompt() {
+    const oldPass = prompt("Podaj stare hasło:");
+    if (!oldPass) return;
+
+    const newPass = prompt("Podaj nowe hasło:");
+    if (!newPass) return;
+
+    try {
+        const response = await fetch(`${API_URL}/users/me/password`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                old_password: oldPass,
+                new_password: newPass
+            })
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || "Nie udało się zmienić hasła");
+        }
+
+        alert("Hasło zostało zmienione.");
+    } catch (e) {
+        alert(e.message);
+    }
+}
+
+async function deleteAccount() {
+    if (!confirm("Czy na pewno chcesz usunąć swoje konto? Tej operacji nie można cofnąć!")) return;
+
+    // Need user ID. Checking token payload or fetching /users/me would be best.
+    // For now we loop users to find self (inefficient but works with current `loadUsers` data if cached, but let's just fetch list)
+
+    // Better: let's decode simple JWT if possible or just use what we have. 
+    // We stored 'username'. 
+    // Let's find ID from the user list we loaded?
+    // Or add an endpoint /users/me. 
+    // Quick hack for this task: iterate loaded users global or fetch again.
+
+    try {
+        const response = await fetch(`${API_URL}/users/`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const users = await response.json();
+        const me = users.find(u => u.username === currentUser);
+
+        if (!me) throw new Error("Nie znaleziono użytkownika");
+
+        const delResp = await fetch(`${API_URL}/users/${me.id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!delResp.ok) throw new Error("Nie udało się usunąć konta");
+
+        alert("Konto usunięte.");
+        logout();
+    } catch (e) {
+        alert(e.message);
+    }
+}
 
 // Update loadUsers for better UI
 async function loadUsers() {

@@ -9,7 +9,7 @@
 </head>
 
 <body>
-
+    <div id="notification-area"></div>
 
     <div class="container" id="auth-view">
         <h1>Menedżer Wydatków</h1>
@@ -33,6 +33,8 @@
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <h1 id="welcome-msg">Dashboard</h1>
             <div class="header-actions">
+                <button onclick="changePasswordPrompt()" style="width: auto;">Zmień Hasło</button>
+                <button onclick="deleteAccount()" style="width: auto;" class="danger">Usuń Konto</button>
                 <button onclick="logout()" style="width: auto;" class="secondary">Wyloguj</button>
             </div>
         </div>
@@ -54,8 +56,11 @@
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
                 <div style="display: flex; gap: 10px; flex-grow: 1;">
                     <h3>Wydatki</h3>
+                    <input type="text" id="search-input" placeholder="Szukaj..." oninput="debounceSearch()"
+                        style="max-width: 200px;">
                 </div>
-                <button onclick="loadExpenses()" style="width: auto;">Odśwież</button>
+                <button onclick="loadExpenses(document.getElementById('search-input').value)"
+                    style="width: auto;">Odśwież</button>
             </div>
             <div id="expense-list">
                 <!-- Expenses will be listed here -->
@@ -68,7 +73,18 @@
         </div>
     </div>
 
-
+    <div class="chat-container">
+        <div class="chat-header" onclick="toggleChatBody()">Czat Grupowy</div>
+        <div id="chat-body">
+            <div class="chat-messages" id="chat-messages">
+                <!-- Messages -->
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Wpisz wiadomość...">
+                <button onclick="sendChat()">Wyślij</button>
+            </div>
+        </div>
+    </div>
 
     <script src="app.js?v=6"></script>
 </body>

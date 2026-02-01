@@ -54,3 +54,17 @@ class UserPasswordUpdate(BaseModel):
     old_password: str
     new_password: str
 
+class MessageBase(BaseModel):
+    content: str
+
+class MessageCreate(MessageBase):
+    pass
+
+class Message(MessageBase):
+    id: int
+    user_id: int
+    timestamp: datetime
+    user: Optional[User] = None
+
+    class Config:
+        from_attributes = True
