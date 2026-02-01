@@ -69,7 +69,17 @@ async function register() {
     }
 }
 
-function logout() {
+async function logout() {
+    // Call backend logout endpoint
+    try {
+        await fetch(`${API_URL}/logout`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+    } catch (e) {
+        console.log("Logout request failed, continuing with local cleanup");
+    }
+
     localStorage.removeItem("token");
     localStorage.removeItem("username");
     token = null;
@@ -105,7 +115,8 @@ async function loadChatHistory() {
             container.innerHTML = '';
             messages.forEach(msg => {
                 const time = new Date(msg.timestamp).toLocaleTimeString();
-                addChatMessage(msg.user ? msg.user.username : 'Unknown', msg.content, time);
+                const username = msg.user ? msg.user.username : 'Unknown';
+                addChatMessage(username, msg.content, time, msg.id);
             });
         }
     } catch (e) {
@@ -251,7 +262,18 @@ function initWebSocket() {
         const data = JSON.parse(event.data);
 
         if (data.event === 'chat') {
-            addChatMessage(data.user, data.msg, data.time);
+            addChatMessage(data.user, data.msg, data.time, data.message_id);
+        } else if (data.event === 'delete_message') {
+            // Remove message from chat
+            const msgEl = document.querySelector(`[data-message-id="${data.message_id}"]`);
+            if (msgEl) msgEl.remove();
+        } else if (data.event === 'update_message') {
+            // Update message content
+            const msgEl = document.querySelector(`[data-message-id="${data.message_id}"]`);
+            if (msgEl) {
+                const contentEl = msgEl.querySelector('.msg-content');
+                if (contentEl) contentEl.textContent = data.content;
+            }
         } else {
             showNotification(`Zdarzenie: ${data.event}`);
             // simplistic reload
@@ -276,16 +298,57 @@ function sendChat() {
     input.value = '';
 }
 
-function addChatMessage(user, msg, time) {
+function addChatMessage(user, msg, time, messageId = null) {
     const div = document.createElement('div');
     div.className = 'message';
+    if (messageId) div.dataset.messageId = messageId;
+
+    const actionBtns = (user === currentUser && messageId)
+        ? `<button onclick="editMessage(${messageId})" class="edit-msg-btn">✏️</button><button onclick="deleteMessage(${messageId})" class="delete-msg-btn">×</button>`
+        : '';
+
     div.innerHTML = `
         <span class="meta">[${time}] <strong>${user}</strong>:</span>
-        <span>${msg}</span>
+        <span class="msg-content">${msg}</span>
+        ${actionBtns}
     `;
     const container = document.getElementById('chat-messages');
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
+}
+
+async function editMessage(messageId) {
+    const msgEl = document.querySelector(`[data-message-id="${messageId}"]`);
+    const currentContent = msgEl.querySelector('.msg-content').textContent;
+    const newContent = prompt('Edytuj wiadomość:', currentContent);
+
+    if (!newContent || newContent === currentContent) return;
+
+    try {
+        const response = await fetch(`${API_URL}/messages/${messageId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ content: newContent })
+        });
+        if (!response.ok) throw new Error('Failed to edit message');
+    } catch (e) {
+        alert(e.message);
+    }
+}
+
+async function deleteMessage(messageId) {
+    try {
+        const response = await fetch(`${API_URL}/messages/${messageId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Failed to delete message');
+    } catch (e) {
+        alert(e.message);
+    }
 }
 
 function toggleChatBody() {
@@ -340,23 +403,12 @@ async function changePasswordPrompt() {
 async function deleteAccount() {
     if (!confirm("Czy na pewno chcesz usunąć swoje konto? Tej operacji nie można cofnąć!")) return;
 
-    // Need user ID. Checking token payload or fetching /users/me would be best.
-    // For now we loop users to find self (inefficient but works with current `loadUsers` data if cached, but let's just fetch list)
-
-    // Better: let's decode simple JWT if possible or just use what we have. 
-    // We stored 'username'. 
-    // Let's find ID from the user list we loaded?
-    // Or add an endpoint /users/me. 
-    // Quick hack for this task: iterate loaded users global or fetch again.
-
     try {
-        const response = await fetch(`${API_URL}/users/`, {
+        // Get current user info using /users/me endpoint
+        const response = await fetch(`${API_URL}/users/me`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        const users = await response.json();
-        const me = users.find(u => u.username === currentUser);
-
-        if (!me) throw new Error("Nie znaleziono użytkownika");
+        const me = await response.json();
 
         const delResp = await fetch(`${API_URL}/users/${me.id}`, {
             method: 'DELETE',

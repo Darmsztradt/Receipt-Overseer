@@ -158,6 +158,38 @@ button.danger {
     color: #777;
 }
 
+.message .delete-msg-btn {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 0.7em;
+    cursor: pointer;
+    margin-left: 8px;
+    opacity: 0.7;
+}
+
+.message .delete-msg-btn:hover {
+    opacity: 1;
+}
+
+.message .edit-msg-btn {
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 0.7em;
+    cursor: pointer;
+    margin-left: 8px;
+    opacity: 0.7;
+}
+
+.message .edit-msg-btn:hover {
+    opacity: 1;
+}
+
 .expense-item {
     border-bottom: 1px solid #eee;
     padding: 10px 0;

@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 from typing import List, Optional
+import json
 from .. import models, schemas, database, auth
 from ..protocols import mqtt_handler
-import json
 
 router = APIRouter()
 
@@ -128,6 +128,43 @@ def get_chat_history(db: Session = Depends(database.get_db), current_user: model
     messages = db.query(models.Message).order_by(models.Message.timestamp.asc()).limit(50).all()
     return messages
 
+@router.delete("/messages/{message_id}")
+async def delete_message(message_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    message = db.query(models.Message).filter(models.Message.id == message_id).first()
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+    if message.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this message")
+    
+    db.delete(message)
+    db.commit()
+    
+    # Notify via WebSocket and MQTT
+    event = {"event": "delete_message", "message_id": message_id}
+    mqtt_handler.publish(event)
+    await manager.broadcast(json.dumps(event))
+    
+    return {"detail": "Message deleted"}
+
+@router.put("/messages/{message_id}", response_model=schemas.Message)
+async def update_message(message_id: int, message_update: schemas.MessageCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    message = db.query(models.Message).filter(models.Message.id == message_id).first()
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+    if message.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to edit this message")
+    
+    message.content = message_update.content
+    db.commit()
+    db.refresh(message)
+    
+    # Notify via WebSocket and MQTT
+    event = {"event": "update_message", "message_id": message_id, "content": message.content, "user": current_user.username}
+    mqtt_handler.publish(event)
+    await manager.broadcast(json.dumps(event))
+    
+    return message
+
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(database.get_db)):
     await manager.connect(websocket)
@@ -140,25 +177,27 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(databas
             # However, WS here doesn't have easy auth in this snippet without token query param.
             # For simplicity in this demo, we'll try to find the user by username sent in JSON.
             
-            import json
             try:
                 payload = json.loads(data)
                 if payload.get('event') == 'chat':
                     username = payload.get('user')
                     content = payload.get('msg')
                     
-                    # Find user
+                    # Find user and save message to DB
                     user = db.query(models.User).filter(models.User.username == username).first()
                     if user:
                         msg_entry = models.Message(user_id=user.id, content=content)
                         db.add(msg_entry)
                         db.commit()
                         db.refresh(msg_entry)
-                        # Update payload time to server time if needed, or keep client time
-            except:
-                pass # Fail silently for invalid json
+                        # Publish to MQTT as well
+                        mqtt_handler.publish_chat_message(username, content)
+                        # Add message ID to payload for delete button
+                        payload['message_id'] = msg_entry.id
+            except json.JSONDecodeError:
+                pass  # Invalid JSON, skip processing
             
-            # Broadcast received message to all
-            await manager.broadcast(data)
+            # Broadcast with message_id included
+            await manager.broadcast(json.dumps(payload) if isinstance(payload, dict) else data)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
