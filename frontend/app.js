@@ -147,7 +147,7 @@ function renderExpenses(expenses) {
         div.className = 'expense-item';
         div.innerHTML = `
             <div class="expense-details">
-                <strong>${exp.description}</strong> - $${exp.amount} <br>
+                <strong>${exp.description}</strong> - ${exp.amount} PLN <br>
                 <small>Paid by: ${exp.payer ? exp.payer.username : 'Unknown'} | Date: ${new Date(exp.timestamp).toLocaleString()}</small>
             </div>
             <div class="expense-actions">
