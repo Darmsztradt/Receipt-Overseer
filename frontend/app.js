@@ -70,7 +70,6 @@ async function register() {
 }
 
 async function logout() {
-    // Call backend logout endpoint
     try {
         await fetch(`${API_URL}/logout`, {
             method: 'POST',
@@ -96,7 +95,7 @@ function showAuth() {
 function showDashboard() {
     document.getElementById('auth-view').classList.add('hidden');
     document.getElementById('dashboard-view').classList.remove('hidden');
-    document.getElementById('welcome-msg').innerText = `Welcome, ${currentUser}`;
+    document.getElementById('welcome-msg').innerText = `Witaj, ${currentUser}`;
 
     loadUsers();
     loadExpenses();
@@ -123,8 +122,6 @@ async function loadChatHistory() {
         console.error("Failed to load chat history", e);
     }
 }
-
-
 
 async function loadExpenses(search = "") {
     let url = `${API_URL}/expenses/`;
@@ -167,10 +164,6 @@ async function addExpense() {
 
     if (!amount || !description) return alert("Fill all fields");
 
-    // Split logic: Equal split including payer
-    // Total people = selected + payer (1)
-    // Amount per person = amount / (selected.length + 1)
-
     const totalPeople = selectedUserIds.length + 1;
     const splitAmount = amount / totalPeople;
 
@@ -196,7 +189,6 @@ async function addExpense() {
 
         document.getElementById('exp-amount').value = '';
         document.getElementById('exp-desc').value = '';
-        // Checkboxes clear?
     } catch (e) {
         alert(e.message);
     }
@@ -215,19 +207,15 @@ function calculateDebt(expenses) {
     let owedToMe = 0;
 
     expenses.forEach(exp => {
-        // If I paid
         if (exp.payer && exp.payer.username === currentUser) {
             exp.shares.forEach(share => {
-                // If the share is for someone else, they owe me
                 if (share.debtor && share.debtor.username !== currentUser) {
                     owedToMe += share.amount_owed;
                 }
             });
         }
-        // If someone else paid
         else if (exp.payer && exp.payer.username !== currentUser) {
             exp.shares.forEach(share => {
-                // If I am the debtor, I owe them
                 if (share.debtor && share.debtor.username === currentUser) {
                     iOwe += share.amount_owed;
                 }
@@ -264,11 +252,9 @@ function initWebSocket() {
         if (data.event === 'chat') {
             addChatMessage(data.user, data.msg, data.time, data.message_id);
         } else if (data.event === 'delete_message') {
-            // Remove message from chat
             const msgEl = document.querySelector(`[data-message-id="${data.message_id}"]`);
             if (msgEl) msgEl.remove();
         } else if (data.event === 'update_message') {
-            // Update message content
             const msgEl = document.querySelector(`[data-message-id="${data.message_id}"]`);
             if (msgEl) {
                 const contentEl = msgEl.querySelector('.msg-content');
@@ -276,7 +262,6 @@ function initWebSocket() {
             }
         } else {
             showNotification(`Zdarzenie: ${data.event}`);
-            // simplistic reload
             loadExpenses(document.getElementById('search-input').value);
         }
     };
@@ -404,7 +389,6 @@ async function deleteAccount() {
     if (!confirm("Czy na pewno chcesz usunąć swoje konto? Tej operacji nie można cofnąć!")) return;
 
     try {
-        // Get current user info using /users/me endpoint
         const response = await fetch(`${API_URL}/users/me`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -424,7 +408,6 @@ async function deleteAccount() {
     }
 }
 
-// Update loadUsers for better UI
 async function loadUsers() {
     const response = await fetch(`${API_URL}/users/`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -437,8 +420,7 @@ async function loadUsers() {
         if (user.username === currentUser) return;
 
         const div = document.createElement('div');
-        div.className = 'user-select-item'; // Use new class
-        // Make whole div clickable for checkbox
+        div.className = 'user-select-item';
         div.onclick = (e) => {
             if (e.target.tagName !== 'INPUT') {
                 const cb = div.querySelector('input');

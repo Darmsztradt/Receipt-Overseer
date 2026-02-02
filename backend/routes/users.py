@@ -7,7 +7,6 @@ from .. import models, schemas, database, auth
 
 router = APIRouter()
 
-# ===== Authentication =====
 @router.post("/token", response_model=schemas.Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
     user = db.query(models.User).filter(models.User.username == form_data.username).first()
@@ -25,15 +24,12 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 
 @router.post("/logout")
 async def logout(current_user: models.User = Depends(auth.get_current_user)):
-    """Logout endpoint - JWT is stateless, so we acknowledge logout for REST compliance"""
     return {"detail": "Logged out successfully"}
-
-# ===== User Management =====
 
 @router.get("/users/me", response_model=schemas.User)
 def get_current_user_info(current_user: models.User = Depends(auth.get_current_user)):
-    """Get current authenticated user's info"""
     return current_user
+
 @router.post("/users/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
     db_user = db.query(models.User).filter(models.User.username == user.username).first()
