@@ -158,3 +158,29 @@
 2026-02-03 22:27:38,057 - INFO - Application started
 2026-02-03 22:28:01,359 - INFO - Application started
 2026-02-03 22:30:23,964 - INFO - Application started
+2026-02-04 00:09:58,225 - INFO - Application started
+2026-02-04 00:10:10,263 - INFO - GET / - 200 - 0.069s
+2026-02-04 00:10:10,327 - INFO - GET /app.js - 200 - 0.003s
+2026-02-04 00:10:10,329 - INFO - GET /style.css - 200 - 0.006s
+2026-02-04 00:10:16,935 - INFO - POST /token - 200 - 0.080s
+2026-02-04 00:10:16,970 - INFO - GET /users/ - 200 - 0.011s
+2026-02-04 00:10:16,993 - INFO - GET /expenses/ - 200 - 0.017s
+2026-02-04 00:10:17,005 - INFO - GET /chat/history - 200 - 0.006s
+2026-02-04 00:10:26,444 - INFO - DELETE /expenses/1 - 200 - 0.053s
+2026-02-04 00:10:26,465 - INFO - GET /expenses/ - 200 - 0.007s
+2026-02-04 00:10:28,837 - INFO - GET / - 304 - 0.004s
+2026-02-04 00:10:28,959 - INFO - GET /users/ - 200 - 0.034s
+2026-02-04 00:10:28,965 - INFO - GET /expenses/ - 200 - 0.039s
+2026-02-04 00:10:28,967 - INFO - GET /chat/history - 200 - 0.030s
+2026-02-04 00:11:07,368 - INFO - POST /expenses/ - 200 - 0.059s
+2026-02-04 00:11:07,381 - INFO - GET /expenses/ - 200 - 0.008s
+2026-02-04 00:11:23,782 - INFO - Application started
+2026-02-04 00:11:25,595 - INFO - Application started
+2026-02-04 00:11:41,182 - INFO - GET / - 304 - 0.055s
+2026-02-04 00:11:41,617 - INFO - GET /users/ - 200 - 0.053s
+2026-02-04 00:11:41,646 - INFO - GET /chat/history - 200 - 0.035s
+2026-02-04 00:11:41,654 - INFO - GET /expenses/ - 200 - 0.044s
+2026-02-04 00:11:44,053 - INFO - DELETE /expenses/1 - 200 - 0.058s
+2026-02-04 00:11:44,073 - INFO - GET /expenses/ - 200 - 0.009s
+2026-02-04 00:11:52,429 - INFO - POST /expenses/ - 200 - 0.057s
+2026-02-04 00:11:52,441 - INFO - GET /expenses/ - 200 - 0.006s

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSoc
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import json
+from datetime import datetime
 from .. import models, schemas, database, auth
 from ..protocols import mqtt_handler
 
@@ -31,7 +32,8 @@ async def create_expense(expense: schemas.ExpenseCreate, db: Session = Depends(d
     db_expense = models.Expense(
         payer_id=current_user.id,
         amount=expense.amount,
-        description=expense.description
+        description=expense.description,
+        timestamp=datetime.now()
     )
     db.add(db_expense)
     db.commit()
