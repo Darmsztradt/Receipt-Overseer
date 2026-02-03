@@ -21,6 +21,7 @@ function toggleAuth(view) {
     }
 }
 
+// Logowanie przez REST API (wysyła POST /token)
 async function login() {
     const username = document.getElementById('login-username').value;
     const password = document.getElementById('login-password').value;
@@ -123,6 +124,7 @@ async function loadChatHistory() {
     }
 }
 
+// Pobieranie danych przez REST API (GET /expenses)
 async function loadExpenses(search = "") {
     let url = `${API_URL}/expenses/`;
     if (search) url += `?search=${search}`;
@@ -242,10 +244,12 @@ function debounceSearch() {
     }, 500);
 }
 
+// Połączenie z WebSocket dla czatu w czasie rzeczywistym
 function initWebSocket() {
     if (ws) ws.close();
     ws = new WebSocket(`ws://localhost:8000/ws`);
 
+    // Odbieranie wiadomości WebSocket (event listener)
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
 

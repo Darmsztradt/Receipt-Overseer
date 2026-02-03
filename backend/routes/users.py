@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from typing import List
@@ -7,8 +7,9 @@ from .. import models, schemas, database, auth
 
 router = APIRouter()
 
+# Loguje użytkownika (zwraca token)
 @router.post("/token", response_model=schemas.Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
+async def login_for_access_token(response: Response, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
     user = db.query(models.User).filter(models.User.username == form_data.username).first()
     if not user or not auth.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
@@ -20,16 +21,26 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     access_token = auth.create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
+    response.set_cookie(
+        key="access_token",
+        value=f"Bearer {access_token}",
+        httponly=True,
+    )
+    
     return {"access_token": access_token, "token_type": "bearer"}
 
+# Wylogowuje użytkownika (usuwa ciasteczko)
 @router.post("/logout")
-async def logout(current_user: models.User = Depends(auth.get_current_user)):
+async def logout(response: Response, current_user: models.User = Depends(auth.get_current_user)):
+    response.delete_cookie(key="access_token")
     return {"detail": "Logged out successfully"}
 
+# Pobiera dane zalogowanego użytkownika (READ)
 @router.get("/users/me", response_model=schemas.User)
 def get_current_user_info(current_user: models.User = Depends(auth.get_current_user)):
     return current_user
 
+# Rejestruje nowego użytkownika (CREATE)
 @router.post("/users/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
     db_user = db.query(models.User).filter(models.User.username == user.username).first()
@@ -42,6 +53,7 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db)
     db.refresh(db_user)
     return db_user
 
+# Zmienia hasło użytkownika (UPDATE)
 @router.put("/users/me/password", status_code=status.HTTP_200_OK)
 def change_password(
     password_update: schemas.UserPasswordUpdate, 
@@ -58,11 +70,13 @@ def change_password(
     db.commit()
     return {"detail": "Password updated successfully"}
 
+# Pobiera listę wszystkich użytkowników (READ)
 @router.get("/users/", response_model=List[schemas.User])
 def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     users = db.query(models.User).offset(skip).limit(limit).all()
     return users
 
+# Pobiera dane konkretnego użytkownika po ID (READ)
 @router.get("/users/{user_id}", response_model=schemas.User)
 def read_user(user_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     db_user = db.query(models.User).filter(models.User.id == user_id).first()
@@ -70,6 +84,7 @@ def read_user(user_id: int, db: Session = Depends(database.get_db), current_user
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
+# Usuwa konto użytkownika (DELETE)
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(user_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     if current_user.id != user_id:

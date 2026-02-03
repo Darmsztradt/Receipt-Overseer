@@ -7,6 +7,7 @@ from ..protocols import mqtt_handler
 
 router = APIRouter()
 
+# Nadzorca połączeń WebSocket i wysyłaniem wiadomości w czasie rzeczywistym
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
@@ -24,6 +25,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+# Tworzy nowy wydatek (CREATE)
 @router.post("/expenses/", response_model=schemas.Expense)
 async def create_expense(expense: schemas.ExpenseCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     db_expense = models.Expense(
@@ -52,6 +54,7 @@ async def create_expense(expense: schemas.ExpenseCreate, db: Session = Depends(d
 
     return db_expense
 
+# Pobiera listę wydatków (READ) i wyszukuje
 @router.get("/expenses/", response_model=List[schemas.Expense])
 def read_expenses(
     skip: int = 0, 
@@ -62,11 +65,13 @@ def read_expenses(
 ):
     query = db.query(models.Expense)
     if search:
+        # Wyszukiwanie wzorcowe
         query = query.filter(models.Expense.description.contains(search))
     
     expenses = query.offset(skip).limit(limit).all()
     return expenses
 
+# Aktualizuje wydatek (UPDATE)
 @router.put("/expenses/{expense_id}", response_model=schemas.Expense)
 async def update_expense(expense_id: int, expense_update: schemas.ExpenseCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     db_expense = db.query(models.Expense).filter(models.Expense.id == expense_id).first()
@@ -98,6 +103,7 @@ async def update_expense(expense_id: int, expense_update: schemas.ExpenseCreate,
 
     return db_expense
 
+# Usuwa wydatek (DELETE)
 @router.delete("/expenses/{expense_id}")
 async def delete_expense(expense_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     db_expense = db.query(models.Expense).filter(models.Expense.id == expense_id).first()
@@ -116,11 +122,13 @@ async def delete_expense(expense_id: int, db: Session = Depends(database.get_db)
 
     return {"detail": "Expense deleted"}
 
+# Pobiera historię czatu (READ)
 @router.get("/chat/history", response_model=List[schemas.Message])
 def get_chat_history(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     messages = db.query(models.Message).order_by(models.Message.timestamp.asc()).limit(50).all()
     return messages
 
+# Usuwa wiadomość z czatu (DELETE)
 @router.delete("/messages/{message_id}")
 async def delete_message(message_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     message = db.query(models.Message).filter(models.Message.id == message_id).first()
@@ -138,6 +146,7 @@ async def delete_message(message_id: int, db: Session = Depends(database.get_db)
     
     return {"detail": "Message deleted"}
 
+# Edytuje wiadomość z czatu (UPDATE)
 @router.put("/messages/{message_id}", response_model=schemas.Message)
 async def update_message(message_id: int, message_update: schemas.MessageCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     message = db.query(models.Message).filter(models.Message.id == message_id).first()
@@ -156,6 +165,7 @@ async def update_message(message_id: int, message_update: schemas.MessageCreate,
     
     return message
 
+# Obsługuje połączenie WebSocket dla czatu
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(database.get_db)):
     await manager.connect(websocket)
