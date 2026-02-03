@@ -17,9 +17,11 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
+# Szyfrowanie hasła (pbkdf2_sha256)
 def get_password_hash(password):
     return pwd_context.hash(password)
 
+# Tworzenie tokena JWT (JSON Web Token)
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
     if expires_delta:
@@ -31,6 +33,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+# Weryfikacja tokena JWT (z nagłówka lub ciasteczka)
 async def get_current_user(request: Request, token: Optional[str] = Depends(oauth2_scheme), db: Session = Depends(database.get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

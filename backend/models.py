@@ -3,7 +3,8 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
 from datetime import datetime
-
+# Do bazy danych (tylko)
+# Tabela użytkowników (login, hasło)
 class User(Base):
     __tablename__ = "users"
 
@@ -14,6 +15,7 @@ class User(Base):
     expenses_paid = relationship("Expense", back_populates="payer")
     debts = relationship("ExpenseShare", back_populates="debtor")
 
+# Tabela wydatków
 class Expense(Base):
     __tablename__ = "expenses"
 
@@ -26,6 +28,7 @@ class Expense(Base):
     payer = relationship("User", foreign_keys=[payer_id])
     shares = relationship("ExpenseShare", back_populates="expense", cascade="all, delete-orphan")
 
+# Tabela podziału wydatków (kto komu ile jest winien)
 class ExpenseShare(Base):
     __tablename__ = "expense_shares"
 
@@ -37,6 +40,7 @@ class ExpenseShare(Base):
     expense = relationship("Expense", back_populates="shares")
     debtor = relationship("User")
 
+# Tabela wiadomości czatu
 class Message(Base):
     __tablename__ = "messages"
 
