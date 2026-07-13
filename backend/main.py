@@ -29,13 +29,8 @@ async def log_requests(request: Request, call_next):
     logger.info(f"{request.method} {request.url.path} - {response.status_code} - {duration:.3f}s")
     return response
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS middleware removed because the frontend is served from the same origin (FastAPI static files mount),
+# which avoids AssertionError when allow_origins is "*" and allow_credentials is True.
 
 app.include_router(users.router, tags=["users"])
 app.include_router(expenses.router, tags=["expenses"])

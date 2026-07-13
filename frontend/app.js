@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:8000";
+const API_URL = "";
 let token = localStorage.getItem("token");
 let currentUser = localStorage.getItem("username");
 let ws = null;
@@ -109,6 +109,10 @@ async function loadChatHistory() {
         const response = await fetch(`${API_URL}/chat/history`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
+        if (response.status === 401) {
+            logout();
+            return;
+        }
         if (response.ok) {
             const messages = await response.json();
             const container = document.getElementById('chat-messages');
@@ -132,6 +136,10 @@ async function loadExpenses(search = "") {
     const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
     });
+    if (response.status === 401) {
+        logout();
+        return;
+    }
     const expenses = await response.json();
     renderExpenses(expenses);
     calculateDebt(expenses);
@@ -144,10 +152,21 @@ function renderExpenses(expenses) {
     expenses.forEach(exp => {
         const div = document.createElement('div');
         div.className = 'expense-item';
+        
+        let sharesList = '';
+        if (exp.shares && exp.shares.length > 0) {
+            const sharesStr = exp.shares.map(share => {
+                const debtorName = share.debtor ? share.debtor.username : 'Unknown';
+                return `<strong>${debtorName}</strong> (${share.amount_owed.toFixed(2)} PLN)`;
+            }).join(', ');
+            sharesList = `<br><span class="expense-shares" style="font-size: 0.8em; color: #555; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; display: inline-block; margin-top: 5px; border: 1px solid #e2e8f0;">Długi: ${sharesStr}</span>`;
+        }
+
         div.innerHTML = `
             <div class="expense-details">
                 <strong>${exp.description}</strong> - ${exp.amount} PLN <br>
                 <small>Paid by: ${exp.payer ? exp.payer.username : 'Unknown'} | Date: ${new Date(exp.timestamp).toLocaleString()}</small>
+                ${sharesList}
             </div>
             <div class="expense-actions">
                 ${exp.payer && exp.payer.username === currentUser ? `<button onclick="deleteExpense(${exp.id})">Delete</button>` : ''}
@@ -164,9 +183,11 @@ async function addExpense() {
     const checkboxes = document.querySelectorAll('input[name="split-user"]:checked');
     const selectedUserIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
 
-    if (!amount || !description) return alert("Fill all fields");
+    if (!amount || !description) return alert("Wypełnij wszystkie pola");
+    if (selectedUserIds.length === 0) return alert("Wybierz przynajmniej jedną osobę do podziału");
 
-    const totalPeople = selectedUserIds.length + 1;
+    const excludePayer = document.getElementById('exclude-payer').checked;
+    const totalPeople = excludePayer ? selectedUserIds.length : selectedUserIds.length + 1;
     const splitAmount = amount / totalPeople;
 
     const shares = selectedUserIds.map(uid => ({
@@ -191,6 +212,9 @@ async function addExpense() {
 
         document.getElementById('exp-amount').value = '';
         document.getElementById('exp-desc').value = '';
+        document.getElementById('exclude-payer').checked = false;
+        // Uncheck all selected user checkboxes
+        checkboxes.forEach(cb => cb.checked = false);
     } catch (e) {
         alert(e.message);
     }
@@ -205,32 +229,67 @@ async function deleteExpense(id) {
 }
 
 function calculateDebt(expenses) {
-    let iOwe = 0;
-    let owedToMe = 0;
+    // Słownik bilansów z poszczególnymi osobami (dodatni: wiszą mi, ujemny: ja wiszę im)
+    const balances = {};
 
     expenses.forEach(exp => {
-        if (exp.payer && exp.payer.username === currentUser) {
+        const payerName = exp.payer ? exp.payer.username : 'Unknown';
+        
+        if (payerName === currentUser) {
+            // Ja płaciłem, inni wiszą mi
             exp.shares.forEach(share => {
-                if (share.debtor && share.debtor.username !== currentUser) {
-                    owedToMe += share.amount_owed;
+                const debtorName = share.debtor ? share.debtor.username : 'Unknown';
+                if (debtorName !== currentUser) {
+                    balances[debtorName] = (balances[debtorName] || 0) + share.amount_owed;
                 }
             });
-        }
-        else if (exp.payer && exp.payer.username !== currentUser) {
+        } else {
+            // Ktoś inny płacił, patrzę czy ja mu wiszę
             exp.shares.forEach(share => {
-                if (share.debtor && share.debtor.username === currentUser) {
-                    iOwe += share.amount_owed;
+                const debtorName = share.debtor ? share.debtor.username : 'Unknown';
+                if (debtorName === currentUser) {
+                    balances[payerName] = (balances[payerName] || 0) - share.amount_owed;
                 }
             });
         }
     });
 
-    const net = owedToMe - iOwe;
     const container = document.getElementById('debt-summary');
+    
+    let toReceiveHTML = '';
+    let toPayHTML = '';
+    let totalOwedToMe = 0;
+    let totalIOwe = 0;
 
-    let html = `<p>Jesteś winien innym: <strong>${iOwe.toFixed(2)} PLN</strong></p>`;
-    html += `<p>Inni są winni Tobie: <strong>${owedToMe.toFixed(2)} PLN</strong></p>`;
-    html += `<hr><p>Bilans: <strong style="color: ${net >= 0 ? 'green' : 'red'}">${net.toFixed(2)} PLN</strong></p>`;
+    // Sortujemy alfabetycznie po nazwach użytkowników
+    const sortedUsers = Object.keys(balances).sort();
+
+    sortedUsers.forEach(user => {
+        const balance = balances[user];
+        if (balance > 0.01) {
+            toReceiveHTML += `<li style="margin: 4px 0;"><strong>${user}</strong> powinien Ci przeleć: <span style="color: #2ecc71; font-weight: bold;">+${balance.toFixed(2)} PLN</span></li>`;
+            totalOwedToMe += balance;
+        } else if (balance < -0.01) {
+            const absoluteBalance = Math.abs(balance);
+            toPayHTML += `<li style="margin: 4px 0;">Musisz przelać użytkownikowi <strong>${user}</strong>: <span style="color: #e74c3c; font-weight: bold;">-${absoluteBalance.toFixed(2)} PLN</span></li>`;
+            totalIOwe += absoluteBalance;
+        }
+    });
+
+    const net = totalOwedToMe - totalIOwe;
+
+    let html = '';
+    if (toReceiveHTML) {
+        html += `<p style="margin-bottom: 5px; font-weight: bold; color: #2c3e50;">💰 Otrzymasz od innych:</p><ul style="margin-top: 0; padding-left: 20px;">${toReceiveHTML}</ul>`;
+    }
+    if (toPayHTML) {
+        html += `<p style="margin-bottom: 5px; font-weight: bold; color: #2c3e50;">💸 Powinieneś uregulować (np. BLIK):</p><ul style="margin-top: 0; padding-left: 20px;">${toPayHTML}</ul>`;
+    }
+    if (!toReceiveHTML && !toPayHTML) {
+        html += `<p style="color: #7f8c8d; font-style: italic;">🎉 Jesteś rozliczony na czysto ze wszystkimi!</p>`;
+    }
+
+    html += `<hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;"><p>Twój ogólny bilans: <strong style="color: ${net >= 0 ? '#2ecc71' : '#e74c3c'}">${net.toFixed(2)} PLN</strong></p>`;
 
     container.innerHTML = html;
 }
@@ -247,7 +306,8 @@ function debounceSearch() {
 // Połączenie z WebSocket dla czatu w czasie rzeczywistym
 function initWebSocket() {
     if (ws) ws.close();
-    ws = new WebSocket(`ws://localhost:8000/ws`);
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws`);
 
     // Odbieranie wiadomości WebSocket (event listener)
     ws.onmessage = (event) => {
@@ -342,10 +402,13 @@ async function deleteMessage(messageId) {
 
 function toggleChatBody() {
     const body = document.getElementById('chat-body');
+    const icon = document.getElementById('chat-toggle-icon');
     if (body.style.display === 'none') {
         body.style.display = 'block';
+        if (icon) icon.textContent = '▼';
     } else {
         body.style.display = 'none';
+        if (icon) icon.textContent = '▲';
     }
 }
 
@@ -416,6 +479,10 @@ async function loadUsers() {
     const response = await fetch(`${API_URL}/users/`, {
         headers: { 'Authorization': `Bearer ${token}` }
     });
+    if (response.status === 401) {
+        logout();
+        return;
+    }
     const users = await response.json();
     const container = document.getElementById('user-select-list');
     container.innerHTML = '';

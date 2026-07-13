@@ -1,0 +1,38 @@
+# Python bytecode and caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Databases (do not commit actual databases)
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite3
+expenses.db
+test_expenses.db
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Application logs
+*.log
+app.log
+
+# Node/NPM dependencies (if any)
+node_modules/
+.npm/
+
+# IDEs and editors configuration
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
