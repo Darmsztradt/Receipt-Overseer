@@ -267,7 +267,7 @@ function calculateDebt(expenses) {
     sortedUsers.forEach(user => {
         const balance = balances[user];
         if (balance > 0.01) {
-            toReceiveHTML += `<li style="margin: 4px 0;"><strong>${user}</strong> powinien Ci przeleć: <span style="color: #2ecc71; font-weight: bold;">+${balance.toFixed(2)} PLN</span></li>`;
+            toReceiveHTML += `<li style="margin: 4px 0;"><strong>${user}</strong> powinien Ci przelać: <span style="color: #2ecc71; font-weight: bold;">+${balance.toFixed(2)} PLN</span></li>`;
             totalOwedToMe += balance;
         } else if (balance < -0.01) {
             const absoluteBalance = Math.abs(balance);
@@ -280,13 +280,13 @@ function calculateDebt(expenses) {
 
     let html = '';
     if (toReceiveHTML) {
-        html += `<p style="margin-bottom: 5px; font-weight: bold; color: #2c3e50;">💰 Otrzymasz od innych:</p><ul style="margin-top: 0; padding-left: 20px;">${toReceiveHTML}</ul>`;
+        html += `<p style="margin-bottom: 5px; font-weight: bold; color: #2c3e50;">Otrzymasz od innych:</p><ul style="margin-top: 0; padding-left: 20px;">${toReceiveHTML}</ul>`;
     }
     if (toPayHTML) {
-        html += `<p style="margin-bottom: 5px; font-weight: bold; color: #2c3e50;">💸 Powinieneś uregulować (np. BLIK):</p><ul style="margin-top: 0; padding-left: 20px;">${toPayHTML}</ul>`;
+        html += `<p style="margin-bottom: 5px; font-weight: bold; color: #2c3e50;">Powinieneś uregulować (np. BLIK):</p><ul style="margin-top: 0; padding-left: 20px;">${toPayHTML}</ul>`;
     }
     if (!toReceiveHTML && !toPayHTML) {
-        html += `<p style="color: #7f8c8d; font-style: italic;">🎉 Jesteś rozliczony na czysto ze wszystkimi!</p>`;
+        html += `<p style="color: #7f8c8d; font-style: italic;">Jesteś rozliczony na czysto ze wszystkimi!</p>`;
     }
 
     html += `<hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;"><p>Twój ogólny bilans: <strong style="color: ${net >= 0 ? '#2ecc71' : '#e74c3c'}">${net.toFixed(2)} PLN</strong></p>`;

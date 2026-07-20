@@ -1,0 +1,2 @@
+uvicorn backend.main:app --reload --port 8000
+npx cloudflared tunnel --url http://127.0.0.1:8000
